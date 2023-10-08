@@ -1,49 +1,43 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateProductDto, UdpateProductDto } from './dto';
 import { Product } from './entities/product.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class ProductsService {
-  private fakeData: Product[] = [
-    { id: 1, title: 'Ejemplo 1', description: 'Desc 1', price: 10 },
-    { id: 2, title: 'Ejemplo 2', description: 'Desc 2', price: 20 },
-  ];
 
-  create ( { title, description, price } : CreateProductDto) : Product { 
-    const product = new Product();
-    product.id = Math.max(...this.fakeData.map( p => p.id )) + 1;
-    product.title = title;
-    product.description = description;
-    product.price = price;
-    this.fakeData.push(product);
-    return product;
+  constructor(@InjectRepository(Product) private readonly productRepository : Repository<Product > ) {}
+
+  async create ( product : CreateProductDto) : Promise<Product> { 
+    try {
+      const newProduct = this.productRepository.create(product);
+      await this.productRepository.save(newProduct);
+      return newProduct;
+    } catch ( error ) {
+      console.log(error);
+      throw new BadRequestException(error.detail);
+    }
   }
 
-  findAll () : Product[] {
-    return this.fakeData;
+  async findAll () : Promise<Product[]> {
+    return this.productRepository.find();
   }
 
-  findById ( id : number ) : Product {
-    const product = this.fakeData.find( p  => p.id === id );
+  async findById ( id : number ) : Promise<Product> {
+    const product = await this.productRepository.findOne({ where: {id} });
     if (!product) throw new NotFoundException(`Product with ID ${ id } not found`);
     return product;
   }
 
-  update ( { id, title, description, price } : UdpateProductDto) : Product {
-    const product = this.findById(id);
-    product.title = title;
-    product.description = description;
-    product.price = price;
-    this.fakeData = this.fakeData.map( p => {
-      if ( p.id === product.id ) return product;
-      return p;
-    });
-    return product;
+  async update ( product : UdpateProductDto) : Promise<Product> {
+    await this.findById(product.id);
+    return await this.productRepository.save(product);
   }
 
-  remove ( id: number )  {
-    this.findById(id);
-    this.fakeData = this.fakeData.filter( p => p.id !== id );
+  async remove ( id: number )  {
+    const product = await this.findById(id);
+    await this.productRepository.delete(product);
   }
 
 }

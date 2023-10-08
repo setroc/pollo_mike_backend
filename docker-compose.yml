@@ -1,0 +1,11 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: mysql:8.1
+    ports:
+      - 3306:3306
+    volumes:
+      - ./db:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=Tmc1480
