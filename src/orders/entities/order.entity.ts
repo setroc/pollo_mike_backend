@@ -1,10 +1,19 @@
-import { OrderProduct } from "./order-product.entity";
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 
+import { OrderToProduct } from "./order-product.entity";
+
+@Entity({ name: 'orders' })
 export class Order {
+  @PrimaryGeneratedColumn()
   id: number;
-  products: OrderProduct[];
+  @Column('varchar', { length: 200 })
   clientName: string;
+  @Column()
   number: number;
-  total: number;
+  @Column()
+  total: number
+  // relations
+  @OneToMany(()=> OrderToProduct, orderToProduct => orderToProduct.order)
+  orderToProduct: OrderToProduct[];
 }
 

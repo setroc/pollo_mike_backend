@@ -11,28 +11,28 @@ export class OrdersController {
   ) {};
 
   @Post()
-  create(@Body() createOrderDto : CreateOrderDto) : Order {
+  create(@Body() createOrderDto : CreateOrderDto) {
     return this.orderService.create(createOrderDto);
   }
 
   @Get()
-  findAll() : Order [] {
+  findAll() {
     return this.orderService.findAll();
   }
 
   @Get(':id')
-  findById(@Param('id', ParseIntPipe) id : number ) : Order {
+  findById(@Param('id', ParseIntPipe) id : number )  {
     return this.orderService.findById(id);
   }
 
-  @Patch()
-  update(@Body() updateOrderDto : UpdateOrderDto) : Order {
-    return this.orderService.update(updateOrderDto);
-  }
+  // @Patch()
+  // update(@Body() updateOrderDto : UpdateOrderDto) : Order {
+  //   return this.orderService.update(updateOrderDto);
+  // }
 
-  @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id : number) {
-    return this.orderService.remove(id);
-  }
+  // @Delete(':id')
+  // remove(@Param('id', ParseIntPipe) id : number) {
+  //   return this.orderService.remove(id);
+  // }
 
 }

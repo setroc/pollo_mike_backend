@@ -4,7 +4,7 @@ export class CreateOrderDto {
   number: number;
 }
 
-class OrderProductDto {
+export class OrderProductDto {
   id: number;
   quantity: number;
 }
