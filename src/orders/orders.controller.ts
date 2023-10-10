@@ -25,14 +25,14 @@ export class OrdersController {
     return this.orderService.findById(id);
   }
 
-  // @Patch()
-  // update(@Body() updateOrderDto : UpdateOrderDto) : Order {
-  //   return this.orderService.update(updateOrderDto);
-  // }
+  @Patch()
+  update(@Body() updateOrderDto : UpdateOrderDto) {
+    return this.orderService.update(updateOrderDto);
+  }
 
-  // @Delete(':id')
-  // remove(@Param('id', ParseIntPipe) id : number) {
-  //   return this.orderService.remove(id);
-  // }
+  @Delete(':id')
+  remove(@Param('id', ParseIntPipe) id : number) {
+    return this.orderService.remove(id);
+  }
 
 }

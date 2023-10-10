@@ -15,7 +15,7 @@ export class OrderToProduct {
 
   // relations
   @ManyToOne(()=> Order, order => order.orderToProduct)
-  order: Order[];
+  order: Order;
   @ManyToOne(()=> Product, product => product.orderToProduct)
-  product: Product[];
+  product: Product;
 }
