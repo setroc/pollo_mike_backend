@@ -5,6 +5,6 @@ export class CreateOrderDto {
 }
 
 export class OrderProductDto {
-  id: number;
+  productId: number;
   quantity: number;
 }

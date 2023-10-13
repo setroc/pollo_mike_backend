@@ -1,11 +1,12 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
+
+import { Product } from 'src/products/entities/product.entity';
 
 import { CreateOrderDto, OrderProductDto, UpdateOrderDto } from './dto';
 import { Order } from './entities/order.entity';
 import { OrderToProduct } from './entities/order-product.entity';
-import { Product } from 'src/products/entities/product.entity';
 
 @Injectable()
 export class OrdersService {
@@ -27,7 +28,7 @@ export class OrdersService {
       // insert orderToProducts
       for ( let i=0; i<products.length; i++ ) {
         const orderToProduct = this.orderToProductRepository.create({
-          productId: products[i].id,
+          productId: products[i].productId,
           orderId: order.id,
           quantity: products[i].quantity,
         });
@@ -52,14 +53,12 @@ export class OrdersService {
 
   async update( { id, products, clientName, number } : UpdateOrderDto ) : Promise<Order> {
     try {
+      // update orderToProducts
+      await this.updateOrderToProducts(id, products);
+      // update order
       const order = await this.findById(id);
       order.clientName = clientName;
       order.number = number;
-      order.orderToProduct.forEach( op => {
-        const newProduct = products.find( np => np.id === op.id);
-        if ( newProduct ) op.quantity = newProduct.quantity;
-        this.orderToProductRepository.save(op);
-      });
       order.total = await this.calculateTotal(products);
       await this.orderRepository.save(order);
       return order;
@@ -82,10 +81,46 @@ export class OrdersService {
     if ( products.length === 0 ) return 0;
     let total = 0;
     for ( let i=0; i<products.length; i++) {
-      const product = await this.productRepository.findOne({ where: { id:products[i].id } });
-      if ( !product ) throw new NotFoundException(`Product with ID ${ products[i].id } not found`);
+      const product = await this.productRepository.findOne({ where: { id:products[i].productId } });
+      if ( !product ) throw new NotFoundException(`Product with ID ${ products[i].productId } not found`);
       total += (product.price * products[i].quantity);
     }
     return total;
   }
+
+  private async updateOrderToProducts(id: number, products: OrderProductDto[]) {
+    try {
+      const orderToProducts = await this.orderToProductRepository.findBy({ orderId: id });
+      if ( !orderToProducts ) throw new NotFoundException(`Order with ID ${ id } not found`);
+
+      // delete products in ordertoproduct not included in products
+      const idOrderToProductToDelete = [];
+      const productsIdToUpdate = products.reduce((a,b)=>[...a, b.productId], []);
+      orderToProducts.forEach( o => {
+        if (!productsIdToUpdate.includes(o.productId)) idOrderToProductToDelete.push(o.id);
+      });
+      await this.orderToProductRepository.delete({ id: In(idOrderToProductToDelete) });
+      // update and add new products
+      for(const product of products) {
+        const otop = await this.orderToProductRepository.findOne({ where: { orderId: id, productId: product.productId }});
+        if ( otop ) { // update product
+          otop.quantity = product.quantity;
+          await this.orderToProductRepository.save(otop);
+        } else { // not found, add the product
+          // validate if product exists in products
+          const p = await this.productRepository.findOne({ where: { id: product.productId }});
+          if (!p) throw new NotFoundException(`Product with ID ${ product.productId } in Order with ID ${ id } not exist`);
+          const newOrderToProduct = this.orderToProductRepository.create({
+            productId: product.productId,
+            orderId: id,
+            quantity: product.quantity,
+          });
+          await this.orderToProductRepository.save(newOrderToProduct);
+        }
+      }
+    } catch (error) {
+      console.log(error);
+      throw new BadRequestException(error.detail);
+    }
+  } 
 }
