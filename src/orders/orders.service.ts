@@ -53,10 +53,11 @@ export class OrdersService {
 
   async update( id : number, { products, clientName, number } : UpdateOrderDto ) : Promise<Order> {
     try {
-      const order = await this.findById(id);
+      await this.findById(id);
       // update orderToProducts
       await this.updateOrderToProducts(id, products);
       // update order
+      const order = await this.findById(id);
       order.clientName = clientName;
       order.number = number;
       order.total = await this.calculateTotal(products);
