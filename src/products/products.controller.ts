@@ -10,12 +10,12 @@ export class ProductsController {
     private readonly productService : ProductsService
   ) {}
 
-  @Post()
+  @Post('register')
   create(@Body() createProductDto : CreateProductDto ) {
     return this.productService.create(createProductDto);
   }
 
-  @Get()
+  @Get('all')
   findAll() {
     return this.productService.findAll();
   }
@@ -25,12 +25,12 @@ export class ProductsController {
     return this.productService.findById(id);
   }
 
-  @Patch()
-  update(@Body() updateProductDto: UdpateProductDto ) {
-    return this.productService.update(updateProductDto);
+  @Patch('edit/:id')
+  update(@Param('id', ParseIntPipe) id : number, @Body() updateProductDto: UdpateProductDto ) {
+    return this.productService.update(id, updateProductDto);
   }
 
-  @Delete(':id')
+  @Delete('delete/:id')
   remove(@Param('id', ParseIntPipe) id : number ) {
     return this.productService.remove(id);
   }

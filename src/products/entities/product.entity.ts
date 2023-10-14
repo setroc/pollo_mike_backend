@@ -10,7 +10,7 @@ export class Product {
   title: string;
   @Column()
   price: number;
-  @Column("varchar", { length: 255 })
+  @Column("varchar", { length: 200 })
   description: string;
   // relations
   @OneToMany(()=> OrderToProduct, orderToProduct => orderToProduct.order)

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { CreateProductDto, UdpateProductDto } from './dto';
 import { Product } from './entities/product.entity';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -16,7 +16,7 @@ export class ProductsService {
       return newProduct;
     } catch ( error ) {
       console.log(error);
-      throw new BadRequestException(error.detail);
+      throw new InternalServerErrorException('Error creating a product.');
     }
   }
 
@@ -30,14 +30,29 @@ export class ProductsService {
     return product;
   }
 
-  async update ( product : UdpateProductDto) : Promise<Product> {
-    await this.findById(product.id);
-    return await this.productRepository.save(product);
+  async update ( id : number, product : UdpateProductDto) : Promise<Product> {
+    try {
+      const productToUpdate = await this.findById(id);
+      productToUpdate.title = product.title;
+      productToUpdate.description = product.description;
+      productToUpdate.price = product.price;
+      return await this.productRepository.save(productToUpdate);
+    } catch ( error ) {
+      console.log(error);
+      if (error instanceof NotFoundException) throw error;
+      throw new InternalServerErrorException('Error updating a product.');
+    }
   }
-
+  
   async remove ( id: number )  {
-    const product = await this.findById(id);
-    await this.productRepository.delete(product);
+    try {
+      const product = await this.findById(id);
+      await this.productRepository.delete(product);
+    } catch ( error ) {
+      console.log(error);
+      if (error instanceof NotFoundException) throw error;
+      throw new InternalServerErrorException('Error deleting a product.');
+    }
   }
 
 }
