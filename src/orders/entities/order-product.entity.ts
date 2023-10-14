@@ -10,7 +10,7 @@ export class OrderToProduct {
   orderId: number;
   @Column()
   productId: number;
-  @Column()
+  @Column('decimal', { precision: 16, scale: 1})
   quantity: number;
 
   // relations

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, Repository } from 'typeorm';
 
@@ -37,7 +37,7 @@ export class OrdersService {
       return order;
     } catch ( error ) {
       console.log(error);
-      throw new BadRequestException(error.detail);
+      throw new InternalServerErrorException(error);
     }
   }
 
@@ -51,12 +51,12 @@ export class OrdersService {
     return order;
   }
 
-  async update( { id, products, clientName, number } : UpdateOrderDto ) : Promise<Order> {
+  async update( id : number, { products, clientName, number } : UpdateOrderDto ) : Promise<Order> {
     try {
+      const order = await this.findById(id);
       // update orderToProducts
       await this.updateOrderToProducts(id, products);
       // update order
-      const order = await this.findById(id);
       order.clientName = clientName;
       order.number = number;
       order.total = await this.calculateTotal(products);
@@ -64,16 +64,23 @@ export class OrdersService {
       return order;
     } catch ( error ) {
       console.log(error);
-      throw new BadRequestException(error.detail);
+      if (error instanceof NotFoundException) throw error;
+      throw new InternalServerErrorException('Error updating order');
     }
   }
 
   async remove ( id : number ) {
-    const order = await this.findById(id);
-    order.orderToProduct.forEach( op => {
-      this.orderToProductRepository.delete({ id: op.id });
-    });
-    await this.orderRepository.delete({ id });
+    try {
+      const order = await this.findById(id);
+      order.orderToProduct.forEach( op => {
+        this.orderToProductRepository.delete({ id: op.id });
+      });
+      await this.orderRepository.delete({ id });
+    } catch (error) {
+      console.log(error);
+      if (error instanceof NotFoundException) throw error;
+      throw new InternalServerErrorException('Error deleting order');
+    }
   }
 
   // function to calculate the total of the order
@@ -120,7 +127,8 @@ export class OrdersService {
       }
     } catch (error) {
       console.log(error);
-      throw new BadRequestException(error.detail);
+      if (error instanceof NotFoundException) throw error;
+      throw new InternalServerErrorException(`Error updating products in order with ID ${id}`);
     }
   } 
 }

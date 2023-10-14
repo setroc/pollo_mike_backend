@@ -10,12 +10,12 @@ export class OrdersController {
     private readonly orderService : OrdersService
   ) {};
 
-  @Post()
+  @Post('register')
   create(@Body() createOrderDto : CreateOrderDto) {
     return this.orderService.create(createOrderDto);
   }
   
-  @Get()
+  @Get('all')
   findAll() {
     return this.orderService.findAll();
   }
@@ -25,12 +25,12 @@ export class OrdersController {
     return this.orderService.findById(id);
   }
 
-  @Patch()
-  update(@Body() updateOrderDto : UpdateOrderDto) {
-    return this.orderService.update(updateOrderDto);
+  @Patch('edit/:id')
+  update(@Param('id', ParseIntPipe) id : number, @Body() updateOrderDto : UpdateOrderDto) {
+    return this.orderService.update(id, updateOrderDto);
   }
 
-  @Delete(':id')
+  @Delete('delete/:id')
   remove(@Param('id', ParseIntPipe) id : number) {
     return this.orderService.remove(id);
   }

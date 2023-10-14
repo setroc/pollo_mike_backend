@@ -10,7 +10,7 @@ export class Order {
   clientName: string;
   @Column()
   number: number;
-  @Column()
+  @Column('decimal', { precision: 16, scale: 2})
   total: number
   // relations
   @OneToMany(()=> OrderToProduct, orderToProduct => orderToProduct.order)
