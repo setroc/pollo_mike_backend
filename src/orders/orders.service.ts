@@ -57,6 +57,7 @@ export class OrdersService {
       if ( state < 0 || state > 2 ) throw new BadRequestException('El estado de no es correcto.');
       order.state = state;
       await this.orderRepository.save(order);
+      return order;
     } catch( error ) {
       console.log(error);
       if (error instanceof NotFoundException) throw error;
