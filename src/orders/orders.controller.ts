@@ -30,6 +30,11 @@ export class OrdersController {
     return this.orderService.update(id, updateOrderDto);
   }
 
+  @Patch('updateState/:id/:state')
+  updateState(@Param('id', ParseIntPipe) id : number,@Param('state', ParseIntPipe) state : number) {
+    return this.orderService.updateState(id, state);
+  }
+
   @Delete('delete/:id')
   remove(@Param('id', ParseIntPipe) id : number) {
     return this.orderService.remove(id);

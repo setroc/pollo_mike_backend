@@ -14,6 +14,8 @@ export class Order {
   total: number;
   @Column('date')
   date: string;
+  @Column('int')
+  state: number;
   // relations
   @OneToMany(()=> OrderToProduct, orderToProduct => orderToProduct.order)
   orderToProduct: OrderToProduct[];

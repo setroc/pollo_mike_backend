@@ -1,4 +1,4 @@
-import { ArrayNotEmpty, IsDateString, IsNotEmpty, IsNumber, IsOptional, IsString, ValidateNested } from "class-validator";
+import { ArrayNotEmpty, IsDateString, IsNotEmpty, IsNumber, IsString, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
 
 import { OrderProductDto } from "./";

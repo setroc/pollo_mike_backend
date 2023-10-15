@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, Repository } from 'typeorm';
 
@@ -23,7 +23,7 @@ export class OrdersService {
       // calculate total
       const total = await this.calculateTotal(products);
       // insert order
-      const order = this.orderRepository.create({clientName, number, total, date});
+      const order = this.orderRepository.create({clientName, number, total, date, state: 0});
       await this.orderRepository.save(order);
       // insert orderToProducts
       for ( let i=0; i<products.length; i++ ) {
@@ -50,6 +50,20 @@ export class OrdersService {
     if (!order) throw new NotFoundException(`Order with ID ${ id } not found`);
     return order;
   }
+
+  async updateState( id: number, state: number ) {
+    try {
+      const order = await this.findById(id);
+      if ( state < 0 || state > 2 ) throw new BadRequestException('El estado de no es correcto.');
+      order.state = state;
+      await this.orderRepository.save(order);
+    } catch( error ) {
+      console.log(error);
+      if (error instanceof NotFoundException) throw error;
+      if (error instanceof BadRequestException) throw error;
+      throw new InternalServerErrorException('Error updating state of order');
+    } 
+  } 
 
   async update( id : number, { products, clientName, number, date } : UpdateOrderDto ) : Promise<Order> {
     try {
