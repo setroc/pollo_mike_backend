@@ -7,6 +7,8 @@ import { Product } from 'src/products/entities/product.entity';
 import { CreateOrderDto, OrderProductDto, UpdateOrderDto } from './dto';
 import { Order } from './entities/order.entity';
 import { OrderToProduct } from './entities/order-product.entity';
+import { Stock } from 'src/stock/entities/stock.entity';
+import { StockToProduct } from 'src/stock/entities/stock-product.entity';
 
 @Injectable()
 export class OrdersService {
@@ -15,11 +17,20 @@ export class OrdersService {
     @InjectRepository(Product) private readonly productRepository : Repository<Product>,
     @InjectRepository(Order) private readonly orderRepository : Repository<Order>,
     @InjectRepository(OrderToProduct) private readonly orderToProductRepository : Repository<OrderToProduct>,
+    @InjectRepository(Stock) private readonly stockRepository : Repository<Stock>,
+    @InjectRepository(StockToProduct) private readonly stockToProductRepository : Repository<StockToProduct>,
     private readonly dataSource : DataSource
   ) {}
 
   async create( { products, clientName, number, date } : CreateOrderDto) : Promise<Order> {
     try {
+      // validate if producst exists and have stock
+      for( const p of products) {
+        const product = await this.productRepository.findOne({ where: { id: p.productId } });
+        if ( !product ) throw new NotFoundException(`Product with ID ${ p.productId } in order not found.`);
+        const haveStock = await this.checkStockOfProduct(p.productId, p.quantity, date);
+        if (!haveStock) throw new BadRequestException(`Doesnt have stock in product with ID ${p.productId}.`);
+      }
       // calculate total
       const total = await this.calculateTotal(products);
       // insert order
@@ -37,6 +48,8 @@ export class OrdersService {
       return order;
     } catch ( error ) {
       console.log(error);
+      if (error instanceof NotFoundException) throw error;
+      if (error instanceof BadRequestException) throw error;
       throw new InternalServerErrorException(error);
     }
   }
@@ -54,7 +67,7 @@ export class OrdersService {
   async updateState( id: number, state: number ) {
     try {
       const order = await this.findById(id);
-      if ( state < 0 || state > 2 ) throw new BadRequestException('El estado de no es correcto.');
+      if ( state < 0 || state > 2 ) throw new BadRequestException('The state of the order isnt correct.');
       order.state = state;
       await this.orderRepository.save(order);
       return order;
@@ -99,6 +112,10 @@ export class OrdersService {
       throw new InternalServerErrorException('Error deleting order');
     }
   }
+
+
+
+
 
   // function to calculate the total of the order
   private async calculateTotal(products : OrderProductDto[]) : Promise<number> {
@@ -148,4 +165,34 @@ export class OrdersService {
       throw new InternalServerErrorException(`Error updating products in order with ID ${id}`);
     }
   } 
+
+  private async checkStockOfProduct(productId: number, quantity: number, date: string) : Promise<boolean> {
+    try {
+      // obtain the stock of the product
+      const stock = await this.stockRepository.findOne({ where : { date } });
+      if ( !stock ) throw new NotFoundException(`Stock in date ${date} not found.`);
+      const productStock = await this.stockToProductRepository.findOne({ where: { stockId: stock.id, productId } });
+      if ( !productStock ) throw new NotFoundException(`Product with ID ${productId} not found int stock in date ${date}.`);
+      const productStockQuantity = productStock.quantity;
+      // obtain the number of product in orders
+      const orders = await this.orderRepository.find({ where: {date}, relations: ['orderToProduct', 'orderToProduct.product'] });
+      if (orders.length === 0 ) { // doesnt have orders
+        if ( quantity > productStockQuantity ) return false;
+        return true;
+      }
+      const ordersIds = orders.reduce( (a,b) => [...a, b.id], []);
+      const ordersToProducts = await this.orderToProductRepository.find({ where: { orderId: In(ordersIds), productId } });
+      if (ordersToProducts.length === 0 ) { // doesnt have orders with the product
+        if ( quantity > productStockQuantity ) return false;
+        return true;
+      }
+      const quantityInOrders = ordersToProducts.reduce( (a,b) => Number(a) + Number(b.quantity), 0);
+      if ( (quantity + quantityInOrders) > productStockQuantity) return false;
+      return true;
+    } catch( error ) {
+      console.log(error);
+      if (error instanceof NotFoundException) throw error;
+      throw new InternalServerErrorException(`Error during check the stock.`);
+    }
+  }
 }
