@@ -11,7 +11,9 @@ export class Order {
   @Column()
   number: number;
   @Column('decimal', { precision: 16, scale: 2})
-  total: number
+  total: number;
+  @Column('date')
+  date: string;
   // relations
   @OneToMany(()=> OrderToProduct, orderToProduct => orderToProduct.order)
   orderToProduct: OrderToProduct[];

@@ -1,4 +1,4 @@
-import { ArrayNotEmpty, IsNumber, IsOptional, IsString, ValidateNested } from "class-validator";
+import { ArrayNotEmpty, IsDateString, IsNotEmpty, IsNumber, IsOptional, IsString, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
 
 import { OrderProductDto } from "./";
@@ -12,4 +12,7 @@ export class CreateOrderDto {
   clientName: string;
   @IsNumber({maxDecimalPlaces:0}, { message: 'El número de la orden debe ser un número.'})
   number: number;
+  @IsNotEmpty({ message: 'Debe ingresar una fecha.' })
+  @IsDateString({ strict: false }, { message: 'No es una fecha válida.' })
+  date: string;
 }

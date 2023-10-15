@@ -18,12 +18,12 @@ export class OrdersService {
     private readonly dataSource : DataSource
   ) {}
 
-  async create( { products, clientName, number } : CreateOrderDto) : Promise<Order> {
+  async create( { products, clientName, number, date } : CreateOrderDto) : Promise<Order> {
     try {
       // calculate total
       const total = await this.calculateTotal(products);
       // insert order
-      const order = this.orderRepository.create({clientName, number, total});
+      const order = this.orderRepository.create({clientName, number, total, date});
       await this.orderRepository.save(order);
       // insert orderToProducts
       for ( let i=0; i<products.length; i++ ) {
@@ -51,7 +51,7 @@ export class OrdersService {
     return order;
   }
 
-  async update( id : number, { products, clientName, number } : UpdateOrderDto ) : Promise<Order> {
+  async update( id : number, { products, clientName, number, date } : UpdateOrderDto ) : Promise<Order> {
     try {
       await this.findById(id);
       // update orderToProducts
@@ -60,6 +60,7 @@ export class OrdersService {
       const order = await this.findById(id);
       order.clientName = clientName;
       order.number = number;
+      order.date = date;
       order.total = await this.calculateTotal(products);
       await this.orderRepository.save(order);
       return order;
