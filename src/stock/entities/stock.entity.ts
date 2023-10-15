@@ -7,7 +7,7 @@ import { StockToProduct } from "./stock-product.entity";
 export class Stock {
   @PrimaryGeneratedColumn()
   id: number;
-  @Column('datetime')
+  @Column('date')
   date: string;
   // relations
   @OneToMany(
