@@ -81,6 +81,13 @@ export class OrdersService {
 
   async update( id : number, { products, clientName, number, date } : UpdateOrderDto ) : Promise<Order> {
     try {
+      // validate if producst exists and have stock
+      for( const p of products) {
+        const product = await this.productRepository.findOne({ where: { id: p.productId } });
+        if ( !product ) throw new NotFoundException(`Product with ID ${ p.productId } in order not found.`);
+        const haveStock = await this.checkStockOfProduct(p.productId, p.quantity, date, id);
+        if (!haveStock) throw new BadRequestException(`Doesnt have stock in product with ID ${p.productId}.`);
+      }
       await this.findById(id);
       // update orderToProducts
       await this.updateOrderToProducts(id, products);
@@ -95,6 +102,7 @@ export class OrdersService {
     } catch ( error ) {
       console.log(error);
       if (error instanceof NotFoundException) throw error;
+      if (error instanceof BadRequestException) throw error;
       throw new InternalServerErrorException('Error updating order');
     }
   }
@@ -166,7 +174,7 @@ export class OrdersService {
     }
   } 
 
-  private async checkStockOfProduct(productId: number, quantity: number, date: string) : Promise<boolean> {
+  private async checkStockOfProduct(productId: number, quantity: number, date: string, orderId?: number) : Promise<boolean> {
     try {
       // obtain the stock of the product
       const stock = await this.stockRepository.findOne({ where : { date } });
@@ -187,6 +195,14 @@ export class OrdersService {
         return true;
       }
       const quantityInOrders = ordersToProducts.reduce( (a,b) => Number(a) + Number(b.quantity), 0);
+      // UPDATE - obtain the quantity in orden before update
+      if (orderId) {
+        const otp = await this.orderToProductRepository.findOne({ where: { orderId } });
+        if (!otp) throw new NotFoundException(`Order with ID ${orderId} not found.`);
+        if ( (quantity + quantityInOrders - otp.quantity) > productStockQuantity) return false;
+        return true;
+      }
+      // CREATE
       if ( (quantity + quantityInOrders) > productStockQuantity) return false;
       return true;
     } catch( error ) {
