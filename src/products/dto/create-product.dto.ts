@@ -1,4 +1,4 @@
-import { IsNotEmpty, Min, MinLength } from "class-validator";
+import { IsNegative, IsNotEmpty, Min, MinLength } from "class-validator";
 
 export class CreateProductDto {
   @IsNotEmpty({ message: 'El título no puede estar vacío.' })
@@ -9,4 +9,6 @@ export class CreateProductDto {
   price: number;
   @IsNotEmpty({ message: 'La descripción no puede estar vacío.' })
   description: string;
+  @IsNotEmpty({ message: 'Debe ingresar la cantidad del producto' })
+  stepQuantity: number;
 }

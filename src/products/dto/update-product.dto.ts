@@ -9,4 +9,6 @@ export class UdpateProductDto {
   price: number;
   @IsNotEmpty({ message: 'La descripción no puede estar vacío.' })
   description: string;
+  @IsNotEmpty({ message: 'Debe ingresar la cantidad del producto' })
+  stepQuantity: number;
 }

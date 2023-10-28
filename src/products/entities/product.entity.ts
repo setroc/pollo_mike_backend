@@ -13,6 +13,8 @@ export class Product {
   price: number;
   @Column("varchar", { length: 200 })
   description: string;
+  @Column("decimal", { precision: 16, scale: 2})
+  stepQuantity: number;
   // relations
   @OneToMany(()=> OrderToProduct, orderToProduct => orderToProduct.order)
   orderToProduct: OrderToProduct[];

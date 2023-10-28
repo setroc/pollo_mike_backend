@@ -36,6 +36,7 @@ export class ProductsService {
       productToUpdate.title = product.title;
       productToUpdate.description = product.description;
       productToUpdate.price = product.price;
+      productToUpdate.stepQuantity = product.stepQuantity;
       return await this.productRepository.save(productToUpdate);
     } catch ( error ) {
       console.log(error);
