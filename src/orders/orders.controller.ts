@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { Order } from './entities/order.entity';
 import { CreateOrderDto, UpdateOrderDto } from './dto';
@@ -16,8 +16,10 @@ export class OrdersController {
   }
   
   @Get('all')
-  findAll() {
-    return this.orderService.findAll();
+  findAll(@Query('date') date : string) {
+    if (!date)
+      return this.orderService.findAll();
+    return this.orderService.findByDate(date);
   }
 
   @Get(':id')

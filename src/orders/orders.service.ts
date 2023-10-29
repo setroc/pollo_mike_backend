@@ -64,6 +64,10 @@ export class OrdersService {
     return order;
   }
 
+  async findByDate ( date : string ) : Promise<Order[]> {
+    return await this.orderRepository.find({ where: { date }, relations: ['orderToProduct', 'orderToProduct.product'] });
+  } 
+
   async updateState( id: number, state: number ) {
     try {
       const order = await this.findById(id);
