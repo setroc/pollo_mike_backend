@@ -1,7 +1,7 @@
 version: '3.9'
 
 services:
-  postgres:
+  mysql:
     image: mysql:8.1
     ports:
       - 3306:3306

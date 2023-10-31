@@ -1,4 +1,4 @@
-import { IsNotEmpty, Min, MinLength } from "class-validator";
+import { IsIn, IsNotEmpty, Min, MinLength } from "class-validator";
 
 export class UdpateProductDto {
   @IsNotEmpty({ message: 'El título no puede estar vacío.' })
@@ -11,4 +11,7 @@ export class UdpateProductDto {
   description: string;
   @IsNotEmpty({ message: 'Debe ingresar la cantidad del producto' })
   stepQuantity: number;
+  @IsNotEmpty({ message: 'Debe ingresar el tipo de producto.'})
+  @IsIn(['Comida', 'Complemento'], { message: 'El valor debe ser Comida o Complemento.'})
+  type: string;
 }
