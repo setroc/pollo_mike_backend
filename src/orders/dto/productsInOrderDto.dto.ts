@@ -1,6 +1,6 @@
 import { IsNotEmpty, IsNumber, Min } from "class-validator";
 
-export class OrderProductDto {
+export class ProductsInOrderDto {
   @IsNotEmpty({ message: 'El ID del producto no puede estar vacío.' })
   @IsNumber({ maxDecimalPlaces: 0 },{ message: 'El ID del producto debe ser un número.' })
   productId: number;

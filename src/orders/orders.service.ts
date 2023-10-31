@@ -4,7 +4,7 @@ import { DataSource, In, Repository } from 'typeorm';
 
 import { Product } from 'src/products/entities/product.entity';
 
-import { CreateOrderDto, OrderProductDto, UpdateOrderDto } from './dto';
+import { CreateOrderDto, ProductsInOrderDto, UpdateOrderDto } from './dto';
 import { Order } from './entities/order.entity';
 import { OrderToProduct } from './entities/order-product.entity';
 import { Stock } from 'src/stock/entities/stock.entity';
@@ -59,8 +59,33 @@ export class OrdersService {
   }
 
   async findById( id : number ) : Promise<Order> {
-    const order =  await this.orderRepository.findOne({ where: { id }, relations: ['orderToProduct', 'orderToProduct.product']});
+    const order = await this.dataSource.manager
+    .createQueryBuilder(Order, 'orders')
+    .select([
+      'orders.id as id',
+      'orders.clientName as clientName',
+      'orders.number as number',
+      'orders.total as total',
+      'orders.date as date',
+      'orders.state as state',
+    ])
+    .where('orders.id = :id', { id }).getRawOne();
     if (!order) throw new NotFoundException(`Order with ID ${ id } not found`);
+    const productsInOrder = await this.dataSource.manager
+    .createQueryBuilder(OrderToProduct, 'orders_products')
+    .innerJoin('orders_products.product', 'products')
+    .select([
+      'products.id as id', 
+      'products.title as title', 
+      'products.price as price', 
+      'products.description as description',
+      'products.stepQuantity as stepQuantity',
+      'products.type as type',
+      'orders_products.quantity as quantity',
+    ])
+    .where('orders_products.orderId = :id', {id}).getRawMany();
+    if (!productsInOrder) throw new NotFoundException(`Products in order with ID ${ id } not found`);
+    order.products = productsInOrder;
     return order;
   }
 
@@ -130,7 +155,7 @@ export class OrdersService {
 
 
   // function to calculate the total of the order
-  private async calculateTotal(products : OrderProductDto[]) : Promise<number> {
+  private async calculateTotal(products : ProductsInOrderDto[]) : Promise<number> {
     if ( products.length === 0 ) return 0;
     let total = 0;
     for ( let i=0; i<products.length; i++) {
@@ -141,7 +166,7 @@ export class OrdersService {
     return total;
   }
 
-  private async updateOrderToProducts(id: number, products: OrderProductDto[]) {
+  private async updateOrderToProducts(id: number, products: ProductsInOrderDto[]) {
     try {
       const orderToProducts = await this.orderToProductRepository.findBy({ orderId: id });
       if ( !orderToProducts ) throw new NotFoundException(`Order with ID ${ id } not found`);

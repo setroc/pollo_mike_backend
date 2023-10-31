@@ -1,13 +1,13 @@
 import { ArrayNotEmpty, IsDateString, IsNotEmpty, IsNumber, IsString, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
 
-import { OrderProductDto } from "./";
+import { ProductsInOrderDto } from "./";
 
 export class UpdateOrderDto {
   @ArrayNotEmpty({ message: 'Debe ingresar productos.' })
   @ValidateNested({ each: true })
-  @Type(()=> OrderProductDto)
-  products: OrderProductDto[];
+  @Type(()=> ProductsInOrderDto)
+  products: ProductsInOrderDto[];
   @IsString({ message: 'El cliente debe ser una cadena.' })
   clientName: string;
   @IsNumber({maxDecimalPlaces:0}, { message: 'El número de la orden debe ser un número.'})
