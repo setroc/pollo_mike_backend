@@ -16,10 +16,10 @@ export class OrdersController {
   }
   
   @Get('all')
-  findAll(@Query('date') date : string) {
-    if (!date)
+  findAll(@Query('date') date : string, @Query('state') state : number) {
+    if (!date || !state)
       return this.orderService.findAll();
-    return this.orderService.findByDate(date);
+    return this.orderService.findByDateAndState(date, state);
   }
 
   @Get(':id')

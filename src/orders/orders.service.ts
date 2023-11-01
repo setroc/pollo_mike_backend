@@ -116,7 +116,7 @@ export class OrdersService {
     return order;
   }
 
-  async findByDate ( date : string ) : Promise<IOrder[]> {
+  async findByDateAndState ( date : string, state: number ) : Promise<IOrder[]> {
     const orders : IOrder[] = await this.dataSource.manager
     .createQueryBuilder(Order, 'orders')
     .select([
@@ -127,7 +127,8 @@ export class OrdersService {
       'orders.date as date',
       'orders.state as state',
     ])
-    .where('orders.date = :date',{date}).getRawMany();
+    .where('orders.date = :date',{date})
+    .andWhere('orders.state = :state',{state}).getRawMany();
     for (let i=0; i<orders.length; i++) {
       const productsInOrder : IProducInOrder[] = await this.dataSource.manager
       .createQueryBuilder(OrderToProduct, 'orders_products')
@@ -150,6 +151,11 @@ export class OrdersService {
   async updateState( id: number, state: number ) {
     try {
       const order = await this.findById(id);
+      /*
+        0 - apartado
+        1 - en curso
+        2 - entregado
+      */
       if ( state < 0 || state > 2 ) throw new BadRequestException('The state of the order isnt correct.');
       order.state = state;
       await this.orderRepository.save(order);
