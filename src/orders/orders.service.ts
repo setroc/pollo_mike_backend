@@ -9,6 +9,7 @@ import { Order } from './entities/order.entity';
 import { OrderToProduct } from './entities/order-product.entity';
 import { Stock } from 'src/stock/entities/stock.entity';
 import { StockToProduct } from 'src/stock/entities/stock-product.entity';
+import { IOrder, IProducInOrder } from './interfaces';
 
 @Injectable()
 export class OrdersService {
@@ -22,7 +23,7 @@ export class OrdersService {
     private readonly dataSource : DataSource
   ) {}
 
-  async create( { products, clientName, number, date } : CreateOrderDto) : Promise<Order> {
+  async create( { products, clientName, number, date } : CreateOrderDto) : Promise<IOrder> {
     try {
       // validate if producst exists and have stock
       for( const p of products) {
@@ -45,7 +46,7 @@ export class OrdersService {
         });
         await this.orderToProductRepository.save(orderToProduct);
       }
-      return order;
+      return await this.findById(order.id);
     } catch ( error ) {
       console.log(error);
       if (error instanceof NotFoundException) throw error;
@@ -54,12 +55,38 @@ export class OrdersService {
     }
   }
 
-  async findAll () : Promise<Order[]> {
-    return await this.orderRepository.find({ relations: ['orderToProduct', 'orderToProduct.product']});
+  async findAll () : Promise<IOrder[]> {
+    const orders : IOrder[] = await this.dataSource.manager
+    .createQueryBuilder(Order, 'orders')
+    .select([
+      'orders.id as id',
+      'orders.clientName as clientName',
+      'orders.number as number',
+      'orders.total as total',
+      'orders.date as date',
+      'orders.state as state',
+    ]).getRawMany();
+    for (let i=0; i<orders.length; i++) {
+      const productsInOrder : IProducInOrder[] = await this.dataSource.manager
+      .createQueryBuilder(OrderToProduct, 'orders_products')
+      .innerJoin('orders_products.product', 'products')
+      .select([
+        'products.id as id', 
+        'products.title as title', 
+        'products.price as price', 
+        'products.description as description',
+        'products.stepQuantity as stepQuantity',
+        'products.type as type',
+        'orders_products.quantity as quantity',
+      ])
+      .where('orders_products.orderId = :id', { id: orders[i].id }).getRawMany();
+      orders[i].products = productsInOrder;
+    }
+    return orders;
   }
 
-  async findById( id : number ) : Promise<Order> {
-    const order = await this.dataSource.manager
+  async findById( id : number ) : Promise<IOrder> {
+    const order : IOrder = await this.dataSource.manager
     .createQueryBuilder(Order, 'orders')
     .select([
       'orders.id as id',
@@ -71,7 +98,7 @@ export class OrdersService {
     ])
     .where('orders.id = :id', { id }).getRawOne();
     if (!order) throw new NotFoundException(`Order with ID ${ id } not found`);
-    const productsInOrder = await this.dataSource.manager
+    const productsInOrder : IProducInOrder[] = await this.dataSource.manager
     .createQueryBuilder(OrderToProduct, 'orders_products')
     .innerJoin('orders_products.product', 'products')
     .select([
@@ -89,8 +116,35 @@ export class OrdersService {
     return order;
   }
 
-  async findByDate ( date : string ) : Promise<Order[]> {
-    return await this.orderRepository.find({ where: { date }, relations: ['orderToProduct', 'orderToProduct.product'] });
+  async findByDate ( date : string ) : Promise<IOrder[]> {
+    const orders : IOrder[] = await this.dataSource.manager
+    .createQueryBuilder(Order, 'orders')
+    .select([
+      'orders.id as id',
+      'orders.clientName as clientName',
+      'orders.number as number',
+      'orders.total as total',
+      'orders.date as date',
+      'orders.state as state',
+    ])
+    .where('orders.date = :date',{date}).getRawMany();
+    for (let i=0; i<orders.length; i++) {
+      const productsInOrder : IProducInOrder[] = await this.dataSource.manager
+      .createQueryBuilder(OrderToProduct, 'orders_products')
+      .innerJoin('orders_products.product', 'products')
+      .select([
+        'products.id as id', 
+        'products.title as title', 
+        'products.price as price', 
+        'products.description as description',
+        'products.stepQuantity as stepQuantity',
+        'products.type as type',
+        'orders_products.quantity as quantity',
+      ])
+      .where('orders_products.orderId = :id', { id: orders[i].id }).getRawMany();
+      orders[i].products = productsInOrder;
+    }
+    return orders;
   } 
 
   async updateState( id: number, state: number ) {
@@ -108,8 +162,11 @@ export class OrdersService {
     } 
   } 
 
-  async update( id : number, { products, clientName, number, date } : UpdateOrderDto ) : Promise<Order> {
+  async update( id : number, { products, clientName, number, date } : UpdateOrderDto ) : Promise<IOrder> {
     try {
+      // validate if order exists
+      const order = await this.orderRepository.findOne({ where: { id }});
+      if (!order) throw new NotFoundException(`Order with ID ${ id } not found`);
       // validate if producst exists and have stock
       for( const p of products) {
         const product = await this.productRepository.findOne({ where: { id: p.productId } });
@@ -117,17 +174,22 @@ export class OrdersService {
         const haveStock = await this.checkStockOfProduct(p.productId, p.quantity, date, id);
         if (!haveStock) throw new BadRequestException(`Doesnt have stock in product with ID ${p.productId}.`);
       }
-      await this.findById(id);
       // update orderToProducts
       await this.updateOrderToProducts(id, products);
       // update order
-      const order = await this.findById(id);
-      order.clientName = clientName;
-      order.number = number;
-      order.date = date;
-      order.total = await this.calculateTotal(products);
-      await this.orderRepository.save(order);
-      return order;
+      const total = await this.calculateTotal(products);
+      await this.dataSource.manager
+      .createQueryBuilder(Order, 'orders')
+      .update()
+      .set({
+        clientName,
+        number,
+        date,
+        total
+      })
+      .where('orders.id = :id', { id })
+      .execute();
+      return await this.findById(id);
     } catch ( error ) {
       console.log(error);
       if (error instanceof NotFoundException) throw error;
@@ -139,19 +201,27 @@ export class OrdersService {
   async remove ( id : number ) {
     try {
       const order = await this.findById(id);
-      order.orderToProduct.forEach( op => {
-        this.orderToProductRepository.delete({ id: op.id });
-      });
-      await this.orderRepository.delete({ id });
+      console.log(order);
+      // delete products in table orderToProducts
+      for( let i=0; i<order.products.length; i++) {
+        await this.dataSource.manager
+        .createQueryBuilder(OrderToProduct, 'orders_products')
+        .delete()
+        .where('orders_products.orderId = :id', { id:order.id })
+        .execute();
+      }
+      // delete order 
+      await this.dataSource.manager
+      .createQueryBuilder(Order, 'orders')
+      .delete()
+      .where('orders.id = :id', { id:order.id })
+      .execute();
     } catch (error) {
       console.log(error);
       if (error instanceof NotFoundException) throw error;
       throw new InternalServerErrorException('Error deleting order');
     }
   }
-
-
-
 
 
   // function to calculate the total of the order
