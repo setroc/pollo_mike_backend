@@ -14,4 +14,6 @@ export class UdpateProductDto {
   @IsNotEmpty({ message: 'Debe ingresar el tipo de producto.'})
   @IsIn(['Comida', 'Complemento'], { message: 'El valor debe ser Comida o Complemento.'})
   type: string;
+  @IsNotEmpty({ message: 'Debe ingresar el nombre de la imagen.' })
+  imgName: string;
 }

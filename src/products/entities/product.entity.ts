@@ -17,6 +17,8 @@ export class Product {
   stepQuantity: number;
   @Column("varchar", { length: 200 })
   type: string;
+  @Column("varchar", { length: 200 })
+  imgName: string;
   // relations
   @OneToMany(()=> OrderToProduct, orderToProduct => orderToProduct.order)
   orderToProduct: OrderToProduct[];
