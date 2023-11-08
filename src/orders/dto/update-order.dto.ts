@@ -15,4 +15,6 @@ export class UpdateOrderDto {
   @IsNotEmpty({ message: 'Debe ingresar una fecha.' })
   @IsDateString({ strict: false }, { message: 'No es una fecha válida.' })
   date: string;
+  @IsNumber({maxDecimalPlaces:0}, { message: 'Debe ingresar un estado'})
+  state: number;
 }

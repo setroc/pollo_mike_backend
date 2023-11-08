@@ -16,4 +16,5 @@ export interface IProducInOrder {
   stepQuantity: number;
   type: string;
   quantity: number;
+  imgName: string;
 }

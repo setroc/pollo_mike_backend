@@ -12,7 +12,7 @@ export class Order {
   number: number;
   @Column('decimal', { precision: 16, scale: 2})
   total: number;
-  @Column('date')
+  @Column('datetime')
   date: string;
   @Column('int')
   state: number;

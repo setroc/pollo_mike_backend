@@ -9,3 +9,4 @@ services:
       - ./db:/var/lib/mysql
     environment:
       - MYSQL_ROOT_PASSWORD=Tmc1480
+      - TZ=America/Mexico_City
