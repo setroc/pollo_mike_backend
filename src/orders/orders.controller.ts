@@ -12,6 +12,7 @@ export class OrdersController {
 
   @Post('register')
   create(@Body() createOrderDto : CreateOrderDto) {
+    console.log(createOrderDto);
     return this.orderService.create(createOrderDto);
   }
   

@@ -23,19 +23,19 @@ export class OrdersService {
     private readonly dataSource : DataSource
   ) {}
 
-  async create( { products, clientName, number, date } : CreateOrderDto) : Promise<IOrder> {
+  async create( { products, clientName, number, date, state } : CreateOrderDto) : Promise<IOrder> {
     try {
       // validate if producst exists and have stock
       for( const p of products) {
         const product = await this.productRepository.findOne({ where: { id: p.id } });
-        if ( !product ) throw new NotFoundException(`Product with ID ${ p.id } in order not found.`);
+        if ( !product ) throw new NotFoundException(`Producto con ID ${ p.id } no encontrado.`);
         const haveStock = await this.checkStockOfProduct(p.id, p.quantity, date);
-        if (!haveStock) throw new BadRequestException(`Doesnt have stock in product with ID ${p.id}.`);
+        if (!haveStock) throw new BadRequestException(`No hay stock en el producto  ${product.title}.`);
       }
       // calculate total
       const total = await this.calculateTotal(products);
       // insert order
-      const order = this.orderRepository.create({clientName, number, total, date, state: 0});
+      const order = this.orderRepository.create({clientName, number, total, date, state});
       await this.orderRepository.save(order);
       // insert orderToProducts
       for ( let i=0; i<products.length; i++ ) {
@@ -121,7 +121,7 @@ export class OrdersService {
       'orders.state as state',
     ])
     .where('orders.id = :id', { id }).getRawOne();
-    if (!orderRaw) throw new NotFoundException(`Order with ID ${ id } not found`);
+    if (!orderRaw) throw new NotFoundException(`Orden con ID ${ id } no encontrada.`);
     const productsInOrderRaw : any[] = await this.dataSource.manager
     .createQueryBuilder(OrderToProduct, 'orders_products')
     .innerJoin('orders_products.product', 'products')
@@ -136,7 +136,7 @@ export class OrdersService {
       'orders_products.quantity as quantity',
     ])
     .where('orders_products.orderId = :id', {id}).getRawMany();
-    if (!productsInOrderRaw) throw new NotFoundException(`Products in order with ID ${ id } not found`);
+    if (!productsInOrderRaw) throw new NotFoundException(`Productos en orden con ID ${ id } no encontrados.`);
     const products : IProducInOrder[] = productsInOrderRaw.map((p:any) => {
       return {
         id: Number(p.id),
@@ -240,7 +240,7 @@ export class OrdersService {
         1 - en curso
         2 - entregado
       */
-      if ( state < 0 || state > 2 ) throw new BadRequestException('The state of the order isnt correct.');
+      if ( state < 0 || state > 2 ) throw new BadRequestException('El estado de la orden no es correcto.');
       order.state = state;
       await this.orderRepository.save(order);
       return order;
@@ -248,7 +248,7 @@ export class OrdersService {
       console.log(error);
       if (error instanceof NotFoundException) throw error;
       if (error instanceof BadRequestException) throw error;
-      throw new InternalServerErrorException('Error updating state of order');
+      throw new InternalServerErrorException('Error al actualizar el estado de la orden.');
     } 
   } 
 
@@ -256,13 +256,13 @@ export class OrdersService {
     try {
       // validate if order exists
       const order = await this.orderRepository.findOne({ where: { id }});
-      if (!order) throw new NotFoundException(`Order with ID ${ id } not found`);
+      if (!order) throw new NotFoundException(`Orden con ID ${ id } no encontrada.`);
       // validate if producst exists and have stock
       for( const p of products) {
         const product = await this.productRepository.findOne({ where: { id: p.id } });
-        if ( !product ) throw new NotFoundException(`Product with ID ${ p.id } in order not found.`);
+        if ( !product ) throw new NotFoundException(`Producto con ID ${ p.id } en la orden no encontrado.`);
         const haveStock = await this.checkStockOfProduct(p.id, p.quantity, date, id);
-        if (!haveStock) throw new BadRequestException(`Doesnt have stock in product with ID ${p.id}.`);
+        if (!haveStock) throw new BadRequestException(`No hay stock en el producto  ${product.title}.`);
       }
       // update orderToProducts
       await this.updateOrderToProducts(id, products);
@@ -285,7 +285,7 @@ export class OrdersService {
       console.log(error);
       if (error instanceof NotFoundException) throw error;
       if (error instanceof BadRequestException) throw error;
-      throw new InternalServerErrorException('Error updating order');
+      throw new InternalServerErrorException('Error actualizando orden');
     }
   }
 
@@ -309,7 +309,7 @@ export class OrdersService {
     } catch (error) {
       console.log(error);
       if (error instanceof NotFoundException) throw error;
-      throw new InternalServerErrorException('Error deleting order');
+      throw new InternalServerErrorException('Error eliminando orden');
     }
   }
 
@@ -320,7 +320,7 @@ export class OrdersService {
     let total = 0;
     for ( let i=0; i<products.length; i++) {
       const product = await this.productRepository.findOne({ where: { id:products[i].id } });
-      if ( !product ) throw new NotFoundException(`Product with ID ${ products[i].id } not found`);
+      if ( !product ) throw new NotFoundException(`Producto con ID ${ products[i].id } no encontrado.`);
       total += (product.price * products[i].quantity);
     }
     return total;
@@ -329,7 +329,7 @@ export class OrdersService {
   private async updateOrderToProducts(id: number, products: ProductsInOrderDto[]) {
     try {
       const orderToProducts = await this.orderToProductRepository.findBy({ orderId: id });
-      if ( !orderToProducts ) throw new NotFoundException(`Order with ID ${ id } not found`);
+      if ( !orderToProducts ) throw new NotFoundException(`Orden con ID ${ id } no encontrada.`);
 
       // delete products in ordertoproduct not included in products
       const idOrderToProductToDelete = [];
@@ -347,7 +347,7 @@ export class OrdersService {
         } else { // not found, add the product
           // validate if product exists in products
           const p = await this.productRepository.findOne({ where: { id: product.id }});
-          if (!p) throw new NotFoundException(`Product with ID ${ product.id } in Order with ID ${ id } not exist`);
+          if (!p) throw new NotFoundException(`Producto con ID ${ product.id } en la orden con ID ${ id } no existe.`);
           const newOrderToProduct = this.orderToProductRepository.create({
             productId: product.id,
             orderId: id,
@@ -359,7 +359,7 @@ export class OrdersService {
     } catch (error) {
       console.log(error);
       if (error instanceof NotFoundException) throw error;
-      throw new InternalServerErrorException(`Error updating products in order with ID ${id}`);
+      throw new InternalServerErrorException(`Error actualizando products en la orden con ID ${id}`);
     }
   } 
 
@@ -367,12 +367,12 @@ export class OrdersService {
     try {
       // obtain the stock of the product
       const stock = await this.stockRepository.findOne({ where : { date : date.split('T')[0] } });
-      if ( !stock ) throw new NotFoundException(`Stock in date ${date} not found.`);
+      if ( !stock ) throw new NotFoundException(`Stock en la fecha ${date} no encontrado.`);
       const productStock = await this.stockToProductRepository.findOne({ where: { stockId: stock.id, productId } });
-      if ( !productStock ) throw new NotFoundException(`Product with ID ${productId} not found int stock in date ${date}.`);
+      if ( !productStock ) throw new NotFoundException(`Producto con ID ${productId} no encontrado en el stock de la fecha ${date}.`);
       const productStockQuantity = productStock.quantity;
       // obtain the number of product in orders
-      const orders = await this.orderRepository.find({ where: {date}, relations: ['orderToProduct', 'orderToProduct.product'] });
+      const orders = await this.orderRepository.find({ where: {date : date.split('T')[0] }, relations: ['orderToProduct', 'orderToProduct.product'] });
       if (orders.length === 0 ) { // doesnt have orders
         if ( quantity > productStockQuantity ) return false;
         return true;
@@ -385,9 +385,9 @@ export class OrdersService {
       }
       const quantityInOrders = ordersToProducts.reduce( (a,b) => Number(a) + Number(b.quantity), 0);
       // UPDATE - obtain the quantity in orden before update
-      if (orderId) {
+      if (!!orderId) {
         const otp = await this.orderToProductRepository.findOne({ where: { orderId } });
-        if (!otp) throw new NotFoundException(`Order with ID ${orderId} not found.`);
+        if (!otp) throw new NotFoundException(`Orden con ID ${orderId} no encontrada.`);
         if ( (quantity + quantityInOrders - otp.quantity) > productStockQuantity) return false;
         return true;
       }
@@ -397,7 +397,7 @@ export class OrdersService {
     } catch( error ) {
       console.log(error);
       if (error instanceof NotFoundException) throw error;
-      throw new InternalServerErrorException(`Error during check the stock.`);
+      throw new InternalServerErrorException(`Error mientras se checaba el stock.`);
     }
   }
 }
