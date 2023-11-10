@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 
@@ -34,6 +34,9 @@ export class StockService {
         const product = await this.productRepository.findOne({ where: {id: p.productId}});
         if (!product) throw new NotFoundException(`Product with ID ${ p.productId } not found`);
       };
+      // validate if stock in date doesnt exist
+      const stockExist = await this.stockRepository.findOne({ where: { date : createStock.date.split('T')[0] }});
+      if (!!stockExist) throw new BadRequestException(`Ya existe un stock en la fecha ${createStock.date}`);
       // create new stock
       const stock = this.stockRepository.create({ date: createStock.date });
       const stockCreated = await this.stockRepository.save(stock);
@@ -51,6 +54,7 @@ export class StockService {
     } catch ( error ) {
       console.log(error);
       if (error instanceof NotFoundException) throw error;
+      if (error instanceof BadRequestException) throw error;
       throw new InternalServerErrorException('Error creating stock.');
     }
   }

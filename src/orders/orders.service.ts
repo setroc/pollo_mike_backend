@@ -372,7 +372,7 @@ export class OrdersService {
       if ( !productStock ) throw new NotFoundException(`Producto con ID ${productId} no encontrado en el stock de la fecha ${date}.`);
       const productStockQuantity = productStock.quantity;
       // obtain the number of product in orders
-      const orders = await this.orderRepository.find({ where: {date : date.split('T')[0] }, relations: ['orderToProduct', 'orderToProduct.product'] });
+      const orders = await this.dataSource.manager.createQueryBuilder(Order, 'orders').select('orders.id as id').where('DATE(orders.date) = :date',{date:date.split('T')[0]}).getRawMany();
       if (orders.length === 0 ) { // doesnt have orders
         if ( quantity > productStockQuantity ) return false;
         return true;
