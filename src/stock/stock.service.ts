@@ -1,8 +1,8 @@
 import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 
-import { CreateStockDto, UpdateStockDto } from './dto';
+import { CreateStockDto, StockDto, UpdateStockDto } from './dto';
 
 import { Stock } from './entities/stock.entity';
 import { Product } from 'src/products/entities/product.entity';
@@ -15,6 +15,7 @@ export class StockService {
     @InjectRepository(Stock) private readonly stockRepository: Repository<Stock>,
     @InjectRepository(StockToProduct) private readonly stockToProductRepository: Repository<StockToProduct>,
     @InjectRepository(Product) private readonly productRepository: Repository<Stock>,
+    private readonly dataSource : DataSource
   ){}
 
   async findAll() : Promise<Stock[]> {
@@ -27,7 +28,42 @@ export class StockService {
     return stock;
   }
 
-  async create( createStock : CreateStockDto) : Promise<Stock> {
+  async findByDate( date: string ) : Promise<StockDto[]> {
+    try {
+      let stockRaw = await this.dataSource.manager
+      .createQueryBuilder()
+      .select([
+        's.id AS stockId',
+        'p.id AS productId',
+        'p.title AS title',
+        'p.description AS description',
+        'p.price AS price',
+        'sp.quantity AS quantity',
+      ])
+      .from(StockToProduct, 'sp')
+      .innerJoin('sp.stock', 's')
+      .innerJoin('sp.product', 'p')
+      .where('s.date = :date', { date })
+      .getRawMany();
+      if (stockRaw.length === 0) throw new NotFoundException(`No se encontro un stock en la fecha ingresada.`);
+      
+      stockRaw = stockRaw.map(s => ({
+        stockId: Number(s.stockId),
+        productId: Number(s.productId),
+        title: s.title,
+        description: s.description,
+        price: Number(s.price),
+        quantity: Number(s.quantity),
+      }));
+      return stockRaw;
+    } catch ( error ) {
+      console.error(error);
+      if (error instanceof NotFoundException) throw error;
+      throw new NotFoundException(`No se encontro un stock en la fecha ingresada.`);
+    }
+  }
+
+  async create( createStock : CreateStockDto) : Promise<StockDto[]> {
     try {
       // validate all products exist
       for( const p of createStock.products)  {
@@ -50,7 +86,7 @@ export class StockService {
         return this.stockToProductRepository.save(stp);
       });
       await Promise.all(stockToProductPromises);
-      return await this.stockRepository.findOne({ where: { id: stock.id }, relations: ['stockToProduct', 'stockToProduct.product'] })
+      return await this.findByDate(createStock.date);
     } catch ( error ) {
       console.log(error);
       if (error instanceof NotFoundException) throw error;
@@ -59,7 +95,7 @@ export class StockService {
     }
   }
 
-  async update(id: number, updateStock: UpdateStockDto) : Promise<Stock> {
+  async update(id: number, updateStock: UpdateStockDto) : Promise<StockDto[]> {
     try {
       // verify if stock exists
       let stock = await this.findById(id);
@@ -91,7 +127,7 @@ export class StockService {
       }
       stock.date = updateStock.date;
       await this.stockRepository.save(stock);
-      return await this.stockRepository.findOne({ where: {id}, relations: ['stockToProduct', 'stockToProduct.product'] });
+      return await this.findByDate(updateStock.date);
     } catch ( error ) {
       console.log(error);
       if (error instanceof NotFoundException) throw error;

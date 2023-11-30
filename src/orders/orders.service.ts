@@ -70,7 +70,7 @@ export class OrdersService {
       return {
         id: o.id,
         clientName: o.clientName,
-        date: o.date.toISOString().split('T')[0],
+        date: o.date,
         number: Number(o.number),
         state: Number(o.state),
         total: Number(o.total),
@@ -152,12 +152,13 @@ export class OrdersService {
     const order : IOrder = {
       id: orderRaw.id,
       clientName: orderRaw.clientName,
-      date: orderRaw.date.toISOString().split('T')[0],
+      date: orderRaw.date,
       number: Number(orderRaw.number),
       state: Number(orderRaw.state),
       total: Number(orderRaw.total),
       products
     }
+    console.log(order);
     return order;
   }
 

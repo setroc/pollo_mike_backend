@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query } from '@nestjs/common';
 
 import { StockService } from './stock.service';
 import { CreateStockDto, UpdateStockDto } from './dto';
@@ -18,6 +18,11 @@ export class StockController {
   @Get('all')
   findAll() {
     return this.stockService.findAll();
+  }
+
+  @Get()
+  findByDate(@Query('date') date : string) {
+    return this.stockService.findByDate(date);
   }
 
   @Get(':id')
