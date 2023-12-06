@@ -368,7 +368,7 @@ export class OrdersService {
     try {
       // obtain the stock of the product
       const stock = await this.stockRepository.findOne({ where : { date : date.split('T')[0] } });
-      if ( !stock ) throw new NotFoundException(`Stock en la fecha ${date} no encontrado.`);
+      if ( !stock ) throw new NotFoundException(`Stock en la fecha ${date.split('T')[0]} no encontrado.`);
       const productStock = await this.stockToProductRepository.findOne({ where: { stockId: stock.id, productId } });
       if ( !productStock ) throw new NotFoundException(`Producto con ID ${productId} no encontrado en el stock de la fecha ${date}.`);
       const productStockQuantity = productStock.quantity;
